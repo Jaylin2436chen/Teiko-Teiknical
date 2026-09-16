@@ -1,6 +1,13 @@
 
-# This allows you to initialize the SQLite database scheme and 
-# load in data from data/cell-count.csv
+"""
+This allows you to initialize the SQLite database scheme and 
+load in data from data/cell-count.csv
+
+load_data.py
+
+Run: python load_data.py
+"""
+
 
 import csv
 import sqlite3
