@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated project files
+*.db
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
