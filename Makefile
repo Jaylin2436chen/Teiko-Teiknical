@@ -8,4 +8,4 @@ pipeline:
 	python analysis.py
 
 dashboard:
-	streamlit run dashboard.py --server.address 0.0.0.0
+	python -m streamlit run dashboard.py --server.address 0.0.0.0

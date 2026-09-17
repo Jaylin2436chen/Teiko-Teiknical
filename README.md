@@ -277,7 +277,7 @@ python analysis.py
 Start the dashboard:
 
 ```bash
-streamlit run dashboard.py
+python -m streamlit run dashboard.py
 ```
 
 ## Repository Link
