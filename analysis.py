@@ -170,6 +170,23 @@ def part4_subset_analysis(conn):
     """
 
     df_baseline = pd.read_sql_query(query, conn)
+    average_b_cell_query = """
+        SELECT
+            ROUND(AVG(cc.count), 2) AS average_b_cells
+        FROM samples AS s
+        JOIN subjects AS sub
+            ON s.subject_id = sub.subject_id
+        JOIN cell_counts AS cc
+            ON cc.sample_id = s.sample_id
+        WHERE sub.condition = 'melanoma'
+          AND sub.sex = 'M'
+          AND sub.response = 'yes'
+          AND s.time_from_treatment_start = 0
+          AND cc.population = 'b_cell'
+    """
+
+    average_b_cells = pd.read_sql_query(average_b_cell_query, conn,)["average_b_cells"].iloc[0]
+    
 
     # Number of samples from each project
     project_counts = (df_baseline.groupby("project")["sample"].nunique().reset_index(name="sample_count"))
@@ -204,7 +221,9 @@ def part4_subset_analysis(conn):
 
     print("\nPart 4 results have been saved in the outputs directory.")
 
-    return (df_baseline, project_counts, response_counts, sex_counts)
+    print(
+        "\n The average B-cell count for male melanoma "f"responders at time 0: {average_b_cells:.2f}")    
+    return (df_baseline, project_counts, response_counts, sex_counts, average_b_cells)
 
 
 # ------------------------------------------------
