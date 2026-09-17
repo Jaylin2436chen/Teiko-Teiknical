@@ -43,38 +43,52 @@ st.set_page_config(page_title = "Immune Cell Analysis", layout = "wide",)
 
 
 def load_dashboard_data():
-    """Load the analysis data from the SQLite database."""
+    """Loading analysis data from the SQLite database."""
 
-    conn = sqlite3.connect(DB_PATH)
+    with sqlite3.connect(DB_PATH) as conn:
+        df_frequency = get_frequency_table(conn)
 
-    frequency_df = get_frequency_table(conn)
+        baseline_query = """
+            SELECT
+                s.sample_id AS sample,
+                sub.subject_id,
+                sub.project,
+                sub.response,
+                sub.sex,
+                sub.condition,
+                sub.treatment,
+                s.sample_type,
+                s.time_from_treatment_start
+            FROM samples AS s
+            JOIN subjects AS sub
+                ON s.subject_id = sub.subject_id
+            WHERE sub.condition = 'melanoma'
+              AND sub.treatment = 'miraclib'
+              AND s.sample_type = 'PBMC'
+              AND s.time_from_treatment_start = 0
+            ORDER BY sub.project, sub.subject_id
+        """
 
-    baseline_query = """
-        SELECT
-            s.sample_id AS sample,
-            sub.subject_id,
-            sub.project,
-            sub.response,
-            sub.sex,
-            sub.condition,
-            sub.treatment,
-            s.sample_type,
-            s.time_from_treatment_start
-        FROM samples AS s
-        JOIN subjects AS sub
-            ON s.subject_id = sub.subject_id
-        WHERE sub.condition = 'melanoma'
-          AND sub.treatment = 'miraclib'
-          AND s.sample_type = 'PBMC'
-          AND s.time_from_treatment_start = 0
-        ORDER BY sub.project, sub.subject_id
-    """
+        average_b_cell_query = """
+            SELECT
+                ROUND(AVG(cc.count), 2) AS average_b_cells
+            FROM samples AS s
+            JOIN subjects AS sub
+                ON s.subject_id = sub.subject_id
+            JOIN cell_counts AS cc
+                ON cc.sample_id = s.sample_id
+            WHERE sub.condition = 'melanoma'
+              AND sub.sex = 'M'
+              AND sub.response = 'yes'
+              AND s.time_from_treatment_start = 0
+              AND cc.population = 'b_cell'
+        """
 
-    df_baseline = pd.read_sql_query(baseline_query, conn,)
-    conn.close()
+        df_baseline = pd.read_sql_query(baseline_query, conn,)
 
-    return frequency_df, df_baseline
+        average_b_cells = pd.read_sql_query(average_b_cell_query, conn,)["average_b_cells"].iloc[0]
 
+    return df_frequency, df_baseline, average_b_cells
 
 st.title("Immune Cell Analysis")
 st.write("This dashboard shows cell population frequencies, miraclib response comparisons, and baseline sample summaries.")
@@ -85,9 +99,9 @@ if not database_ready():
     subprocess.run([sys.executable, "analysis.py"], check=True,)
 
 
-frequency_df, df_baseline = load_dashboard_data()
+df_frequency, df_baseline, average_b_cells = load_dashboard_data()
 
-if frequency_df.empty:
+if df_frequency.empty:
     st.error("The database did not return any sample data.")
     st.stop()
 
@@ -102,9 +116,9 @@ with part2_tab:
     st.header("Cell-Population Frequencies")
     st.write("Select a sample to view its total cell count and the relative frequency of each cell population.")
 
-    sample_options = sorted(frequency_df["sample"].unique())
+    sample_options = sorted(df_frequency["sample"].unique())
     selected_sample = st.selectbox("Select a sample", sample_options,)
-    selected_df = frequency_df[frequency_df["sample"] == selected_sample][
+    selected_df = df_frequency[df_frequency["sample"] == selected_sample][
         ["sample", "total_count", "population", "count", "percentage",]]
 
     total_count = int(selected_df["total_count"].iloc[0])
@@ -123,7 +137,7 @@ with part2_tab:
 with part3_tab:
     st.header("Miraclib Responders vs. Non-Responders")
 
-    df_response = response_data(frequency_df)
+    df_response = response_data(df_frequency)
     selected_population = st.selectbox("Select a cell population",sorted(df_response["population"].unique()),)
     df_selected_response = df_response[df_response["population"] == selected_population]
     responder_count = df_selected_response[df_selected_response["response"] == "yes"]["sample"].nunique()
@@ -131,8 +145,9 @@ with part3_tab:
 
     first_column, second_column = st.columns(2)
 
-    first_column.metric("Responder samples",responder_count,)
+    first_column.metric("Responder samples", responder_count,)
     second_column.metric("Non-responder samples", non_responder_count,)
+
     boxplot_path = os.path.join(OUTPUT_DIR, "response_boxplot.png",)
 
     if os.path.exists(boxplot_path):
@@ -165,9 +180,11 @@ with part4_tab:
     sample_total = df_baseline["sample"].nunique()
     subject_total = df_baseline["subject_id"].nunique()
 
-    first_column, second_column = st.columns(2)
+    first_column, second_column, third_column = st.columns(3)
+
     first_column.metric("Baseline samples", sample_total,)
     second_column.metric("Unique subjects", subject_total,)
+    third_column.metric("Average B cells for male responders", f"{average_b_cells:.2f}",)
 
     project_counts = (df_baseline.groupby("project")["sample"].nunique().reset_index(name="sample_count"))
     response_counts = (df_baseline.groupby("response")["subject_id"].nunique().reset_index(name="subject_count"))
