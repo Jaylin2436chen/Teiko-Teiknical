@@ -6,7 +6,8 @@ Interactive dashboard displaying the results from my parts 2, 3, and 4.
 Run:
 streamlit run dashboard.py
 """
-
+import subprocess
+import sys
 import os
 import sqlite3
 import pandas as pd
@@ -59,9 +60,11 @@ def load_dashboard_data():
 st.title("Immune Cell Analysis")
 st.write("This dashboard shows cell population frequencies, miraclib response comparisons, and baseline sample summaries.")
 
-if not os.path.exists(DB_PATH): 
-    st.error("Run the `python load_data.py` and `python analysis.py` scripts first.")
-    st.stop()
+if not os.path.exists(DB_PATH):
+    st.info("Processing the database and analysis results.")
+
+    subprocess.run([sys.executable, "load_data.py"],check=True,)
+    subprocess.run([sys.executable, "analysis.py"], check=True,)
 
 
 frequency_df, df_baseline = load_dashboard_data()
