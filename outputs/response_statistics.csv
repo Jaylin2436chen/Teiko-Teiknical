@@ -1,0 +1,6 @@
+population,responder_median,non_responder_median,test_statistic,p_value,adjusted_p_value,significant
+b_cell,9.4323,9.7884,459968.0,0.055672,0.278359,No
+cd4_t_cell,30.2206,29.6576,515277.5,0.01334,0.066699,No
+cd8_t_cell,24.728,24.6031,478175.5,0.639058,1.0,No
+monocyte,19.6097,19.9423,466509.0,0.163126,0.815631,No
+nk_cell,14.5093,14.7991,464546.5,0.12106,0.605302,No
