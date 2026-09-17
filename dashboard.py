@@ -19,6 +19,24 @@ DB_PATH = "immune_trial.db"
 OUTPUT_DIR = "outputs"
 
 
+def database_ready():
+    """Making sure that the database exists first and contains data"""
+
+    if not os.path.exists(DB_PATH):
+        return False
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+
+        sample_count = conn.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
+        conn.close()
+
+        return sample_count > 0
+
+    except sqlite3.Error:
+        return False
+
+
 st.set_page_config(page_title = "Immune Cell Analysis", layout = "wide",)
 
 
@@ -60,14 +78,19 @@ def load_dashboard_data():
 st.title("Immune Cell Analysis")
 st.write("This dashboard shows cell population frequencies, miraclib response comparisons, and baseline sample summaries.")
 
-if not os.path.exists(DB_PATH):
-    st.info("Processing the database and analysis results.")
-
-    subprocess.run([sys.executable, "load_data.py"],check=True,)
+if not database_ready():
+    st.info("Preparing the database and analysis results.")
+    subprocess.run([sys.executable, "load_data.py"], check=True,)
     subprocess.run([sys.executable, "analysis.py"], check=True,)
+
+    st.cache_data.clear()
 
 
 frequency_df, df_baseline = load_dashboard_data()
+
+if frequency_df.empty:
+    st.error("The database did not return any sample data.")
+    st.stop()
 
 part2_tab, part3_tab, part4_tab = st.tabs(["Part 2: Frequencies", "Part 3: Treatment Response", "Part 4: Baseline Samples",])
 
