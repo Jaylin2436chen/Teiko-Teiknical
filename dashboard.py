@@ -20,7 +20,7 @@ OUTPUT_DIR = "outputs"
 
 
 def database_ready():
-    """Making sure that the database exists first and contains data"""
+    """Making sure the database exists and contains data."""
 
     if not os.path.exists(DB_PATH):
         return False
@@ -29,9 +29,11 @@ def database_ready():
         conn = sqlite3.connect(DB_PATH)
 
         sample_count = conn.execute("SELECT COUNT(*) FROM samples").fetchone()[0]
+        cell_count = conn.execute("SELECT COUNT(*) FROM cell_counts").fetchone()[0]
+
         conn.close()
 
-        return sample_count > 0
+        return sample_count > 0 and cell_count > 0
 
     except sqlite3.Error:
         return False
@@ -40,7 +42,6 @@ def database_ready():
 st.set_page_config(page_title = "Immune Cell Analysis", layout = "wide",)
 
 
-@st.cache_data
 def load_dashboard_data():
     """Load the analysis data from the SQLite database."""
 
@@ -82,8 +83,6 @@ if not database_ready():
     st.info("Preparing the database and analysis results.")
     subprocess.run([sys.executable, "load_data.py"], check=True,)
     subprocess.run([sys.executable, "analysis.py"], check=True,)
-
-    st.cache_data.clear()
 
 
 frequency_df, df_baseline = load_dashboard_data()
